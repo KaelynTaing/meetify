@@ -5,12 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useSearchParams } from "next/navigation";
 
-interface ScheduleProps {
-  selectedDates: Date[]; // Receive selectedDates as a prop
-}
+const Schedule = () => {
+  // Get the `selectedDates` and `eventName` query parameters
+  const searchParams = useSearchParams();
+  const search = searchParams.get("selectedDates");
+  const eventName = searchParams.get("eventName") ?? "Event";
 
-const Schedule: React.FC<ScheduleProps> = ({ selectedDates }) => {
+  // Decode and parse the `selectedDates` query parameter
+  let selectedDates: Date[] = [];
+  if (search) {
+    try {
+      const decoded = decodeURIComponent(search); // Decode the URL-encoded string
+      const parsed = JSON.parse(decoded); // Parse the JSON string into an array
+      selectedDates = parsed.map((date: string) => new Date(date)); // Convert strings to Date objects
+    } catch (error) {
+      console.error("Error parsing selectedDates:", error);
+    }
+  }
+
+  // Sort the selected dates
+  selectedDates.sort((a, b) => a.getTime() - b.getTime());
+
   const placeholderDates = [
     new Date(2024, 5, 17, 12, 34),
     new Date(2024, 5, 17, 12, 34),
@@ -38,16 +55,8 @@ const Schedule: React.FC<ScheduleProps> = ({ selectedDates }) => {
 
   return (
     <div className="container mx-auto p-4 max-w-6xl">
-      {/* wanted to print out the dates to see if they're accessible here */}
-      {/* <ul className="space-y-2">
-        {selectedDates
-          .slice() // Create a copy to avoid mutating the original array
-          .sort((a, b) => a.getTime() - b.getTime()) // Use getTime() for numeric comparison
-          .map((date, index) => (
-            <li key={index}>{date.toDateString()}</li>
-          ))}
-      </ul> */}
-
+      {/* Header which displays the event name */}
+      <h1 className="flex justify-center text-3xl bold">Event: {eventName}</h1>
       <h1 className="text-2xl font-bold mb-4">Team Meeting Scheduler</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
