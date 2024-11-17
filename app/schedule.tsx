@@ -16,7 +16,7 @@ const Schedule: React.FC<ScheduleProps> = ({ selectedDates }) => {
     new Date(2024, 5, 17, 12, 34),
     new Date(2024, 5, 17, 12, 34),
     new Date(2024, 5, 17, 12, 34),
-    new Date(2024, 10, 16, 12, 34),
+    // new Date(2024, 10, 16, 12, 34),
   ];
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
 
@@ -39,14 +39,14 @@ const Schedule: React.FC<ScheduleProps> = ({ selectedDates }) => {
   return (
     <div className="container mx-auto p-4 max-w-4xl">
       {/* wanted to print out the dates to see if they're accessible here */}
-      <ul className="space-y-2">
+      {/* <ul className="space-y-2">
         {selectedDates
           .slice() // Create a copy to avoid mutating the original array
           .sort((a, b) => a.getTime() - b.getTime()) // Use getTime() for numeric comparison
           .map((date, index) => (
             <li key={index}>{date.toDateString()}</li>
           ))}
-      </ul>
+      </ul> */}
 
       <h1 className="text-2xl font-bold mb-4">Team Meeting Scheduler</h1>
 
@@ -57,11 +57,16 @@ const Schedule: React.FC<ScheduleProps> = ({ selectedDates }) => {
               Select Your Availability
             </div>
             <ScrollArea className="h-[500px] w-full">
-              <div className="grid grid-cols-6 gap-1 p-4">
-                <div></div>
-                {placeholderDates.map((date, index) => (
+              <div
+                className="grid"
+                style={{
+                  gridTemplateColumns: `auto repeat(${selectedDates.length}, 1fr)`,
+                }}
+              >
+                <div></div> {/* Empty cell to align dates with times */}
+                {selectedDates.map((date, index) => (
                   <div key={index} className="text-center font-semibold">
-                    {date.getUTCDay()}
+                    {date.toDateString()}
                   </div>
                 ))}
                 {times.map((time) => (
@@ -69,16 +74,16 @@ const Schedule: React.FC<ScheduleProps> = ({ selectedDates }) => {
                     <div key={`time-${time}`} className="text-right pr-2">
                       {time % 12 || 12} {time < 12 ? "AM" : "PM"}
                     </div>
-                    {days.map((day) => (
+                    {selectedDates.map((date) => (
                       <Button
-                        key={`${day}-${time}`}
+                        key={`${date.toDateString()}-${time}`}
                         variant={
-                          selectedSlots.has(`${day}-${time}`)
+                          selectedSlots.has(`${date.toDateString()}-${time}`)
                             ? "default"
                             : "outline"
                         }
                         className="w-full h-8"
-                        onClick={() => toggleSlot(day, time)}
+                        onClick={() => toggleSlot(date.toDateString(), time)}
                       />
                     ))}
                   </>
