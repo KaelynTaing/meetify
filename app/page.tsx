@@ -1,12 +1,7 @@
 "use client";
 import React, { useState } from "react";
-// import Link from "next/link";
-import { BrowserRouter as Router, Route, Routes, Link } from "react-router-dom";
-// import Calendar from "react-calendar";
-import { useNavigate } from "react-router-dom";
 import "react-calendar/dist/Calendar.css";
 import Schedule from "./schedule";
-import Calendar from "./calendar";
 import { CalendarComponent } from "@/components/ui/calendar"; // Adjust the path accordingly
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +29,6 @@ const App: React.FC = () => {
     <div className="container mx-auto p-4 max-w-4xl">
       <h1 className="flex justify-center text-7xl bold">Meetify</h1>
       <h1 className="text-2xl font-bold mb-4">Team Meeting Scheduler</h1>
-      {/* Calendar Component */}
       <CalendarComponent
         mode="multiple" // Allow multiple date selections
         selected={selectedDates} // Pass selectedDates array to Calendar
@@ -66,10 +60,6 @@ const App: React.FC = () => {
           <Schedule selectedDates={selectedDates}></Schedule>
         </div>
       </div>
-      {/* <Calendar
-        // selectedDates={selectedDates}
-        onDateSelect={handleDateSelect}
-      ></Calendar> */}
       <ul>
         {selectedDates
           .slice() // Create a copy to avoid mutating the original array

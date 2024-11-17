@@ -6,8 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import Calendar from "./calendar";
-
 interface ScheduleProps {
   selectedDates: Date[]; // Receive selectedDates as a prop
 }
@@ -35,7 +33,7 @@ const Schedule: React.FC<ScheduleProps> = ({ selectedDates }) => {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
-      <p>test</p>
+      {/* wanted to print out the dates to see if they're accessible here */}
       <ul className="space-y-2">
         {selectedDates
           .slice() // Create a copy to avoid mutating the original array
