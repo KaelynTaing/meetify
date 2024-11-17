@@ -13,9 +13,14 @@ interface ScheduleProps {
 const Schedule: React.FC<ScheduleProps> = ({ selectedDates }) => {
   const placeholderDates = [
     new Date(2024, 5, 17, 12, 34),
+    new Date(2024, 5, 17, 12, 34),
+    new Date(2024, 5, 17, 12, 34),
+    new Date(2024, 5, 17, 12, 34),
     new Date(2024, 10, 16, 12, 34),
   ];
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
+
+  // const [selectedSlots, setSelectedSlots] = useState<Map<string, Set<string>>>(new Map());
 
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
   const times = Array.from({ length: 12 }, (_, i) => i + 9); // 9 AM to 8 PM
@@ -54,9 +59,9 @@ const Schedule: React.FC<ScheduleProps> = ({ selectedDates }) => {
             <ScrollArea className="h-[500px] w-full">
               <div className="grid grid-cols-6 gap-1 p-4">
                 <div></div>
-                {days.map((day) => (
-                  <div key={day} className="text-center font-semibold">
-                    {day}
+                {placeholderDates.map((date, index) => (
+                  <div key={index} className="text-center font-semibold">
+                    {date.getUTCDay()}
                   </div>
                 ))}
                 {times.map((time) => (

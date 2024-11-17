@@ -57,17 +57,9 @@ const App: React.FC = () => {
             className="flex-grow"
           />
           <Button className="ml-2">Create Event</Button>
-          <Schedule selectedDates={selectedDates}></Schedule>
+          {/* <Schedule selectedDates={selectedDates}></Schedule> */}
         </div>
       </div>
-      <ul>
-        {selectedDates
-          .slice() // Create a copy to avoid mutating the original array
-          .sort((a, b) => a.getTime() - b.getTime()) // Use getTime() for numeric comparison
-          .map((date, index) => (
-            <li key={index}>{date.toDateString()}</li>
-          ))}
-      </ul>
       <Schedule selectedDates={selectedDates}></Schedule>
       <style>
         {`
