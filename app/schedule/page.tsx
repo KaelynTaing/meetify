@@ -7,11 +7,21 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSearchParams } from "next/navigation";
 
+import { getAllEvents } from "@/lib/firebase/firestore";
+
+const events = await getAllEvents() 
+
+events.forEach((doc) => {
+  console.log(doc.data())
+})
+
 const Schedule = () => {
   // Get the `selectedDates` and `eventName` query parameters
   const searchParams = useSearchParams();
   const search = searchParams.get("selectedDates");
   const eventName = searchParams.get("eventName") ?? "Event";
+
+   
 
   // Decode and parse the `selectedDates` query parameter
   let selectedDates: Date[] = [];
@@ -28,13 +38,13 @@ const Schedule = () => {
   // Sort the selected dates
   selectedDates.sort((a, b) => a.getTime() - b.getTime());
 
-  const placeholderDates = [
-    new Date(2024, 5, 17, 12, 34),
-    new Date(2024, 5, 17, 12, 34),
-    new Date(2024, 5, 17, 12, 34),
-    new Date(2024, 5, 17, 12, 34),
-    // new Date(2024, 10, 16, 12, 34),
-  ];
+  // const placeholderDates = [
+  //   new Date(2024, 5, 17, 12, 34),
+  //   new Date(2024, 5, 17, 12, 34),
+  //   new Date(2024, 5, 17, 12, 34),
+  //   new Date(2024, 5, 17, 12, 34),
+  //   // new Date(2024, 10, 16, 12, 34),
+  // ];
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
 
   // const [selectedSlots, setSelectedSlots] = useState<Map<string, Set<string>>>(new Map());
