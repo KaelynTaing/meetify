@@ -20,13 +20,16 @@ export default function Component() {
     } else {
       newSelectedSlots.add(slot);
     }
+    
     setSelectedSlots(newSelectedSlots);
+    
   };
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
       <h1 className="text-2xl font-bold mb-4">Team Meeting Scheduler</h1>
 
+      {/* Calendar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2">
           <div className="bg-card text-card-foreground rounded-lg shadow-lg overflow-hidden">
@@ -64,7 +67,7 @@ export default function Component() {
             </ScrollArea>
           </div>
         </div>
-
+        {/* Participants Card */}
         <div>
           <div className="bg-card text-card-foreground rounded-lg shadow-lg mb-4">
             <div className="p-4 bg-muted font-semibold">Participants</div>
@@ -88,6 +91,7 @@ export default function Component() {
             </div>
           </div>
 
+          {/* Best Times Card */}
           <div className="bg-card text-card-foreground rounded-lg shadow-lg">
             <div className="p-4 bg-muted font-semibold">Best Times</div>
             <div className="p-4">

@@ -51,6 +51,7 @@ const Schedule = () => {
       newSelectedSlots.add(slot);
     }
     setSelectedSlots(newSelectedSlots);
+
   };
 
   return (
