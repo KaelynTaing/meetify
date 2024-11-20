@@ -1,16 +1,29 @@
 "use client";
-import React, { useState } from "react";
+import React, {useState } from "react";
 import "react-calendar/dist/Calendar.css";
 import { CalendarComponent } from "@/components/ui/calendar"; // Adjust the path accordingly
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 import Link from "next/link";
+import { randomUUID } from "crypto";
+import {v4 as uuidv4} from "uuid"
+import { addEvent } from "@/lib/firebase/firestore";
+
 
 const App: React.FC = () => {
   // State for the selcted dates and event name
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [eventName, setEventName] = useState("");
+  const [userName, setUsername] = useState("")
+
+  const id = uuidv4()
+
+  const handleClick = () => {
+    console.log(id, " ", eventName, " ", userName, " ", selectedDates)
+    addEvent(id, eventName, userName, selectedDates)
+  }
 
   // Function to handle the selected dates
   const handleSelectDate = (dates: Date[] | undefined) => {
@@ -32,6 +45,14 @@ const App: React.FC = () => {
 
         <div>
           <div className="flex flex-col gap-4">
+            <Label htmlFor="user-name"></Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="user-name"
+                placeholder="Your Name"
+                value={userName}
+                onChange={(e) => setUsername(e.target.value)} />
+            </div>
             <Label htmlFor="new-event"></Label>
             <div className="flex items-center gap-2">
               {/* Input for the event name */}
@@ -45,18 +66,21 @@ const App: React.FC = () => {
 
               {/* Button/Link to reroute user to schedule route. Checks if the user has selected at least one
               date and typed an event name */}
-              {selectedDates.length > 0 && eventName.trim() ? (
+              {selectedDates.length > 0 && eventName.trim() && userName.trim() ? (
                 <Link
                   href={{
                     // Pass the selected dates and event name as query parameters
                     pathname: "/schedule",
                     query: {
-                      // Encode the selected dates as a JSON string
-                      selectedDates: JSON.stringify(selectedDates),
-                      // Pass the event name as a query parameter
-                      eventName: eventName,
+                      // // Encode the selected dates as a JSON string
+                      // selectedDates: JSON.stringify(selectedDates),
+                      // // Pass the event name as a query parameter
+                      // eventName: eventName,
+                      // userName: userName,
+                      id: id,
                     },
                   }}
+                  onClick={() => handleClick()}
                 >
                   <Button>Create Event</Button>
                 </Link>
