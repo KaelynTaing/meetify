@@ -1,46 +1,161 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  addUser,
+  Event,
+  fetchEvent,
+  updateTimes,
+} from "@/lib/firebase/firestore";
+
+// Define times outside the component
+const times = Array.from({ length: 12 }, (_, i) => i + 9); // 9 AM to 8 PM
 
 const Schedule = () => {
-  // Get the `selectedDates` and `eventName` query parameters
-  const searchParams = useSearchParams();
-  const search = searchParams.get("selectedDates");
-  const eventName = searchParams.get("eventName") ?? "Event";
-
-  // Decode and parse the `selectedDates` query parameter
-  let selectedDates: Date[] = [];
-  if (search) {
-    try {
-      const decoded = decodeURIComponent(search); // Decode the URL-encoded string
-      const parsed = JSON.parse(decoded); // Parse the JSON string into an array
-      selectedDates = parsed.map((date: string) => new Date(date)); // Convert strings to Date objects
-    } catch (error) {
-      console.error("Error parsing selectedDates:", error);
-    }
-  }
-
-  // Sort the selected dates
-  selectedDates.sort((a, b) => a.getTime() - b.getTime());
-
-  const placeholderDates = [
-    new Date(2024, 5, 17, 12, 34),
-    new Date(2024, 5, 17, 12, 34),
-    new Date(2024, 5, 17, 12, 34),
-    new Date(2024, 5, 17, 12, 34),
-    // new Date(2024, 10, 16, 12, 34),
-  ];
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
+  const [eventData, setEventData] = useState<Event | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [activeUser, setActiveUser] = useState<string>("");
+  const [isFirstVisit, setFirstVisit] = useState<boolean>(false)
+  const [showNameModal, setShowNameModal] = useState<boolean>(true);
+  const [nameInput, setNameInput] = useState<string>("");
+  const [bestTimes, setBestTimes] = useState<{
+    [date: string]: Array<{ start: number; end: number }>;
+  }>({});
+  const [userColors, setUserColors] = useState<{ [userName: string]: string }>(
+    {}
+  );
+  const [unavailableUsersPerSlot, setUnavailableUsersPerSlot] = useState<{
+    [slot: string]: string[];
+  }>({});
 
-  // const [selectedSlots, setSelectedSlots] = useState<Map<string, Set<string>>>(new Map());
+  const [error, setError] = useState<string | null>(null);
 
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-  const times = Array.from({ length: 12 }, (_, i) => i + 9); // 9 AM to 8 PM
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const id = searchParams.get("id");
+
+  useEffect(() => {
+    if (!id) {
+      router.push("/");
+      return;
+    }
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const event = await fetchEvent(id);
+        setEventData(event);
+        if(event.firstTime){
+          setActiveUser(event.users[0].name)
+          setFirstVisit(true)
+        }
+        else setFirstVisit(false)
+      } catch (err) {
+        console.error("Failed to fetch event: ", err);
+        setError("Failed to load event data. Please try again.");
+        router.push("/");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id, router]);
+
+  // Calculate best times and assign colors when eventData changes
+  useEffect(() => {
+    if (eventData) {
+      const calculatedBestTimes = calculateBestTimes(eventData);
+      setBestTimes(calculatedBestTimes);
+
+      // Assign colors to users
+      const colorPalette = [
+        "#3498db", // Light Blue
+        "#1abc9c", // Turquoise
+        "#9b59b6", // Amethyst
+        "#2ecc71", // Emerald
+        "#2980b9", // Belize Hole Blue
+        "#8e44ad", // Wisteria
+        "#16a085", // Green Sea
+        "#27ae60", // Nephritis
+        "#34495e", // Wet Asphalt
+        "#2c3e50", // Midnight Blue
+        // Add more cool colors if needed
+      ];
+      const userColorsMap: { [userName: string]: string } = {};
+      eventData.users.forEach((user, index) => {
+        userColorsMap[user.name] = colorPalette[index % colorPalette.length];
+      });
+      setUserColors(userColorsMap);
+
+      // Build mapping from slot to unavailable users
+      const mapping: { [slot: string]: string[] } = {};
+      eventData.users.forEach((user) => {
+        user.times.forEach((slot) => {
+          if (!mapping[slot]) {
+            mapping[slot] = [];
+          }
+          mapping[slot].push(user.name);
+        });
+      });
+      setUnavailableUsersPerSlot(mapping);
+    }
+  }, [eventData]);
+
+  // Handles sync button
+  const handleSync = async () => {
+    if (!id) {
+      console.log("id not found");
+      return;
+    }
+
+    if (selectedSlots == null) {
+      return;
+    }
+
+    if (eventData == null) {
+      console.log("no event data");
+      return;
+    }
+
+    setFirstVisit(false)
+
+    await updateTimes(
+      id,
+      Array.from(selectedSlots.values()).sort(),
+      activeUser,
+      eventData
+    );
+
+    // Refresh event data
+    const updatedEvent = await fetchEvent(id);
+    setEventData(updatedEvent);
+  };
+
+  const handleSignIn = async (input: string) => {
+    if (!id) {
+      console.log("id not found");
+      return;
+    }
+
+    if (eventData == null) {
+      console.log("no event data");
+      return;
+    }
+
+    const existingUser = eventData.users.find((e) => e.name === input);
+
+    if (existingUser) {
+      setSelectedSlots(new Set<string>(existingUser.times));
+    } else {
+      await addUser(id, input, eventData);
+      const updatedEvent = await fetchEvent(id);
+      setEventData(updatedEvent);
+    }
+  };
 
   const toggleSlot = (day: string, time: number) => {
     const slot = `${day}-${time}`;
@@ -53,121 +168,198 @@ const Schedule = () => {
     setSelectedSlots(newSelectedSlots);
   };
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4 flex justify-center items-center h-screen">
+        <div className="text-xl">Loading schedule...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-4 flex justify-center items-center h-screen">
+        <div className="text-xl text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+  if (!eventData) {
+    return (
+      <div className="container mx-auto p-4 flex justify-center items-center h-screen">
+        <div className="text-xl">No event data found</div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 max-w-6xl">
-      {/* Header which displays the event name */}
-      <h1 className="flex justify-center text-3xl bold">Event: {eventName}</h1>
-      <h1 className="text-2xl font-bold mb-4">Team Meeting Scheduler</h1>
+      {/* Sign-in Modal */}
+      {showNameModal && !isFirstVisit && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
+          <div className="bg-white p-6 rounded shadow">
+            <h2 className="text-xl mb-4">Please enter your name</h2>
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              className="border p-2 mb-4 w-full"
+              placeholder="Your Name"
+            />
+            <button
+              onClick={() => {
+                setActiveUser(nameInput);
+                setShowNameModal(false);
+                handleSignIn(nameInput);
+              }}
+              className={`px-4 py-2 rounded ${
+                nameInput.trim() === ""
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600"
+              } text-white`}
+              disabled={nameInput.trim() === ""}
+            >
+              Submit
+            </button>
+          </div>
+        </div>
+      )}
+
+      <h1 className="flex justify-center text-3xl font-bold mb-4">
+        Event: {eventData.eventName}
+      </h1>
+      <h2 className="text-2xl font-bold mb-4">Team Meeting Scheduler</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2">
-          <div className="bg-card text-card-foreground rounded-lg shadow-lg overflow-hidden">
-            <div className="p-4 bg-muted font-semibold">
-              {/* maybe should switch with toggle */}
-              Select Your Availability/Unavailablility
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="p-4 bg-gray-100 font-semibold">
+              Select Your Unavailability
             </div>
-            <ScrollArea className="h-[500px] w-full">
+            <div className="overflow-auto max-h-[500px]">
               <div
-                className="grid grid-cols-6 gap-1 p-4"
+                className="grid gap-1 p-4"
                 style={{
-                  gridTemplateColumns: `auto repeat(${selectedDates.length}, 1fr)`,
+                  gridTemplateColumns: `auto repeat(${eventData.calendarDays.length}, 1fr)`,
                 }}
               >
-                <div></div> {/* Empty cell to align dates with times */}
-                {selectedDates.map((date, index) => (
+                <div></div>
+                {eventData.calendarDays.map((date, index) => (
                   <div key={index} className="text-center font-semibold">
-                    {date.toDateString()}
+                    {date}
                   </div>
                 ))}
                 {times.map((time) => (
-                  <>
-                    <div key={`time-${time}`} className="text-right pr-2">
+                  <div key={`row-${time}`} className="contents">
+                    <div className="text-right pr-2">
                       {time % 12 || 12} {time < 12 ? "AM" : "PM"}
                     </div>
-                    {selectedDates.map((date) => (
-                      <Button
-                        key={`${date.toDateString()}-${time}`}
-                        variant={
-                          selectedSlots.has(`${date.toDateString()}-${time}`)
-                            ? "default"
-                            : "outline"
-                        }
-                        className="w-full h-8"
-                        onClick={() => toggleSlot(date.toDateString(), time)}
-                      />
-                    ))}
-                  </>
+                    {eventData.calendarDays.map((date) => {
+                      const slot = `${date}-${time}`;
+
+                      // Get the list of unavailable users for this slot
+                      let unavailableUsers = unavailableUsersPerSlot[slot] || [];
+
+                      // Include the active user's selections
+                      if (
+                        selectedSlots.has(slot) &&
+                        !unavailableUsers.includes(activeUser)
+                      ) {
+                        unavailableUsers = [...unavailableUsers, activeUser];
+                      }
+
+                      // Get colors for the unavailable users
+                      const colors = unavailableUsers.map(
+                        (userName) => userColors[userName]
+                      );
+
+                      // Create background style
+                      let backgroundStyle: React.CSSProperties = {};
+
+                      if (colors.length === 0) {
+                        // No users are unavailable during this slot
+                        backgroundStyle = { backgroundColor: "white" };
+                      } else if (colors.length === 1) {
+                        // Only one user is unavailable
+                        backgroundStyle = { backgroundColor: colors[0] };
+                      } else {
+                        // Multiple users are unavailable
+                        const gradientColors = colors.join(", ");
+                        backgroundStyle = {
+                          backgroundImage: `linear-gradient(90deg, ${gradientColors})`,
+                        };
+                      }
+
+                      return (
+                        <button
+                          key={slot}
+                          style={backgroundStyle}
+                          className="w-full h-8 border rounded"
+                          onClick={() => toggleSlot(date, time)}
+                        />
+                      );
+                    })}
+                  </div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           </div>
+          <button
+            className="m-3 px-4 py-2 float-right bg-gray-900 text-white rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+            onClick={handleSync}
+          >
+            Sync
+          </button>
         </div>
 
         <div>
-          <div className="bg-card text-card-foreground rounded-lg shadow-lg mb-4">
-            <div className="p-4 bg-muted font-semibold">
-              Toggle Marking Available/Unavailable
-            </div>
+          <div className="bg-white rounded-lg shadow-lg mb-4">
+            <div className="p-4 bg-gray-100 font-semibold">Participants</div>
             <div className="p-4">
-              <form>
-                <div className="space-y-2">
-                  {[
-                    "Marking When Unavailable/Busy",
-                    "Marking When Available/Free",
-                    "Marking When Available/Free Virtually",
-                  ].map((option, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id={`option-${index}`}
-                        name="marking-option" // Updated name for clarity
-                        value={option}
-                        className="radio-input"
-                        defaultChecked={index === 0} // Default to the first option
-                      />
-                      <Label
-                        htmlFor={`option-${index}`}
-                        className="cursor-pointer"
-                      >
-                        {option}
-                      </Label>
-                    </div>
+              <ul className="space-y-2">
+                {eventData.users.map((user, index) => (
+                  <li key={index} className="flex items-center">
+                    <span
+                      className="w-4 h-4 mr-2 rounded-full"
+                      style={{ backgroundColor: userColors[user.name] }}
+                    ></span>
+                    {user.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-lg">
+            <div className="p-4 bg-gray-100 font-semibold">Best Times</div>
+            <div className="p-4">
+              {Object.keys(bestTimes).length === 0 ? (
+                <p>No common available times found.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {Object.entries(bestTimes).map(([date, ranges]) => (
+                    <li key={date}>
+                      <strong>{date}:</strong>
+                      <ul className="ml-4">
+                        {ranges.map((range, index) => {
+                          const startLabel = `${range.start % 12 || 12} ${
+                            range.start < 12 ? "AM" : "PM"
+                          }`;
+                          const endHour = range.end + 1; // Since the end time is inclusive
+                          const endLabel = `${endHour % 12 || 12} ${
+                            endHour < 12 ? "AM" : "PM"
+                          }`;
+                          return (
+                            <li key={index}>
+                              {startLabel} - {endLabel}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </li>
                   ))}
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <div className="bg-card text-card-foreground rounded-lg shadow-lg mb-4">
-            <div className="p-4 bg-muted font-semibold">Participants</div>
-            <div className="p-4">
-              <ul className="space-y-2">
-                <li>Alice</li>
-                <li>Bob</li>
-                <li>Charlie</li>
-              </ul>
-              <div className="mt-4">
-                <Label htmlFor="new-participant">Add Participant</Label>
-                <div className="flex mt-1">
-                  <Input
-                    id="new-participant"
-                    placeholder="Name"
-                    className="flex-grow"
-                  />
-                  <Button className="ml-2">Add</Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card text-card-foreground rounded-lg shadow-lg">
-            <div className="p-4 bg-muted font-semibold">Best Times</div>
-            <div className="p-4">
-              <ul className="space-y-2">
-                <li>Tuesday 2 PM - 4 PM</li>
-                <li>Wednesday 10 AM - 12 PM</li>
-                <li>Friday 1 PM - 3 PM</li>
-              </ul>
+                </ul>
+              )}
             </div>
           </div>
         </div>
@@ -177,3 +369,58 @@ const Schedule = () => {
 };
 
 export default Schedule;
+
+// Calculate Best Times Function
+const calculateBestTimes = (eventData: Event) => {
+  // Create a set of all unavailable time slots
+  const unavailableSlots = new Set<string>();
+  eventData.users.forEach((user) => {
+    user.times.forEach((unavailableSlot) => {
+      unavailableSlots.add(unavailableSlot);
+    });
+  });
+
+  // For each day, find available time ranges
+  const availableTimeRanges: {
+    [date: string]: Array<{ start: number; end: number }>;
+  } = {};
+
+  eventData.calendarDays.forEach((date) => {
+    const availableTimes: number[] = [];
+
+    times.forEach((time) => {
+      const slot = `${date}-${time}`;
+      if (!unavailableSlots.has(slot)) {
+        availableTimes.push(time);
+      }
+    });
+
+    // Group available times into ranges
+    const ranges: Array<{ start: number; end: number }> = [];
+    let startTime: number | null = null;
+    let prevTime: number | null = null;
+
+    availableTimes.forEach((time) => {
+      if (startTime === null) {
+        startTime = time;
+      }
+      if (prevTime !== null && time !== prevTime + 1) {
+        // Time is not consecutive, end current range
+        ranges.push({ start: startTime, end: prevTime });
+        startTime = time;
+      }
+      prevTime = time;
+    });
+
+    // Add the last range
+    if (startTime !== null && prevTime !== null) {
+      ranges.push({ start: startTime, end: prevTime });
+    }
+
+    if (ranges.length > 0) {
+      availableTimeRanges[date] = ranges;
+    }
+  });
+
+  return availableTimeRanges; // Returns an object with dates as keys and arrays of time ranges
+};
