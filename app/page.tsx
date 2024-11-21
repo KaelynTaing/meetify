@@ -20,7 +20,7 @@ const App: React.FC = () => {
   const id = uuidv4()
 
   const handleClick = () => {
-    console.log(id, " ", eventName, " ", userName, " ", selectedDates)
+    
     addEvent(id, eventName, userName, selectedDates)
   }
 

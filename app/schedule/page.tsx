@@ -15,10 +15,11 @@ const times = Array.from({ length: 12 }, (_, i) => i + 9); // 9 AM to 8 PM
 const Schedule = () => {
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [eventData, setEventData] = useState<Event | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeUser, setActiveUser] = useState("");
-  const [showNameModal, setShowNameModal] = useState(true);
-  const [nameInput, setNameInput] = useState("");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [activeUser, setActiveUser] = useState<string>("");
+  const [isFirstVisit, setFirstVisit] = useState<boolean>(false)
+  const [showNameModal, setShowNameModal] = useState<boolean>(true);
+  const [nameInput, setNameInput] = useState<string>("");
   const [bestTimes, setBestTimes] = useState<{
     [date: string]: Array<{ start: number; end: number }>;
   }>({});
@@ -47,6 +48,11 @@ const Schedule = () => {
       try {
         const event = await fetchEvent(id);
         setEventData(event);
+        if(event.firstTime){
+          setActiveUser(event.users[0].name)
+          setFirstVisit(true)
+        }
+        else setFirstVisit(false)
       } catch (err) {
         console.error("Failed to fetch event: ", err);
         setError("Failed to load event data. Please try again.");
@@ -114,6 +120,8 @@ const Schedule = () => {
       console.log("no event data");
       return;
     }
+
+    setFirstVisit(false)
 
     await updateTimes(
       id,
@@ -187,7 +195,7 @@ const Schedule = () => {
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       {/* Sign-in Modal */}
-      {showNameModal && (
+      {showNameModal && !isFirstVisit && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
           <div className="bg-white p-6 rounded shadow">
             <h2 className="text-xl mb-4">Please enter your name</h2>

@@ -9,6 +9,7 @@ interface User {
 export interface Event {
     calendarDays: string[]
     eventName: string
+    firstTime: boolean
     users: User[]
 }
 
@@ -25,6 +26,8 @@ export async function addEvent(id: string, eventName: string, userName: string, 
 
     calendarDays: stringDates,
     eventName: eventName,
+    firstTime: true,
+
     users: [{
         name: userName,
         times: []
@@ -80,7 +83,8 @@ export async function updateTimes(id: string, times: string[], user: string, dat
     })
 
     await updateDoc(docRef, {
-        users: userRecord
+        users: userRecord,
+        firstTime: false
     })
 
 }
