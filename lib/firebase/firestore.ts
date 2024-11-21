@@ -3,7 +3,7 @@ import { getFirestore, collection, getDoc,  getDocs, setDoc, doc, updateDoc } fr
 
 interface User {
     name: string
-    times?: []
+    times?: string[]
 }
 
 export interface Event {
@@ -57,7 +57,7 @@ export async function addUser(id: string, user: string, dataRef: Event) {
     })
     usersTemp.push({
         name: user,
-        times: []
+        times:[]
     })
     await updateDoc(docRef, {
         users: usersTemp
@@ -65,7 +65,23 @@ export async function addUser(id: string, user: string, dataRef: Event) {
     )
 }
 
-export async function updateTimes(id: string, times: string[], dataRef: Event){
+export async function updateTimes(id: string, times: string[], user: string, dataRef: Event){
+    const docRef = doc(db, "events", id)
+    const userRecord: User[] = []
+
+    dataRef.users.forEach(e => {
+        userRecord.push(e)
+    })
+
+    userRecord.forEach(e => {
+        if(e.name == user){
+            e.times = times
+        }
+    })
+
+    await updateDoc(docRef, {
+        users: userRecord
+    })
 
 }
 

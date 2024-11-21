@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import Link from "next/link";
-import { randomUUID } from "crypto";
 import {v4 as uuidv4} from "uuid"
 import { addEvent } from "@/lib/firebase/firestore";
 
@@ -72,11 +71,6 @@ const App: React.FC = () => {
                     // Pass the selected dates and event name as query parameters
                     pathname: "/schedule",
                     query: {
-                      // // Encode the selected dates as a JSON string
-                      // selectedDates: JSON.stringify(selectedDates),
-                      // // Pass the event name as a query parameter
-                      // eventName: eventName,
-                      // userName: userName,
                       id: id,
                     },
                   }}
